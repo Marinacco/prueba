@@ -17,7 +17,7 @@ export function NewLawyerDialog({ open, onOpenChange }: NewLawyerDialogProps) {
 
   const handleSubmit = async () => {
     if (!form.name) {
-      toast.error('Por favor ingresa el nombre del abogado');
+      toast.error('Por favor ingresa el nombre del profesional');
       return;
     }
     await createLawyer.mutateAsync({
@@ -33,7 +33,7 @@ export function NewLawyerDialog({ open, onOpenChange }: NewLawyerDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader><DialogTitle className="font-display text-xl">Nuevo Abogado</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle className="font-display text-xl">Nuevo Profesional</DialogTitle></DialogHeader>
         <div className="space-y-4 py-4">
           <div className="space-y-2">
             <Label>Nombre Completo *</Label>
@@ -57,7 +57,7 @@ export function NewLawyerDialog({ open, onOpenChange }: NewLawyerDialogProps) {
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
           <Button className="btn-gold" onClick={handleSubmit} disabled={createLawyer.isPending}>
-            {createLawyer.isPending ? 'Registrando...' : 'Registrar Abogado'}
+            {createLawyer.isPending ? 'Registrando...' : 'Registrar Profesional'}
           </Button>
         </DialogFooter>
       </DialogContent>

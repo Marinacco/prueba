@@ -61,7 +61,7 @@ export function NewServiceDialog({ open, onOpenChange }: NewServiceDialogProps) 
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Precio Base (MXN) *</Label>
+              <Label>Precio Base (USD) *</Label>
               <Input type="number" value={form.basePrice} onChange={(e) => setForm({ ...form, basePrice: e.target.value })} placeholder="0" />
             </div>
           </div>

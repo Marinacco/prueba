@@ -30,11 +30,11 @@ export default function Lawyers() {
     <MainLayout>
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Directorio de Abogados</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Gestión de perfiles y rendimiento del equipo legal</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Directorio de Profesionales</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Gestión de perfiles y rendimiento del equipo</p>
         </div>
         <Button className="btn-gold rounded-lg px-4 py-2 w-full sm:w-auto" onClick={() => setNewLawyerOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />Nuevo Abogado
+          <Plus className="mr-2 h-4 w-4" />Nuevo Profesional
         </Button>
       </div>
 
@@ -46,9 +46,9 @@ export default function Lawyers() {
       </div>
 
       {isLoading ? (
-        <div className="stat-card text-center py-8 text-muted-foreground">Cargando abogados...</div>
+        <div className="stat-card text-center py-8 text-muted-foreground">Cargando profesionales...</div>
       ) : filteredLawyers.length === 0 ? (
-        <div className="stat-card text-center py-8 text-muted-foreground">No hay abogados registrados. Agrega el primero.</div>
+        <div className="stat-card text-center py-8 text-muted-foreground">No hay profesionales registrados. Agrega el primero.</div>
       ) : (
         <div className="grid gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
           {filteredLawyers.map((lawyer: any) => (
@@ -100,7 +100,7 @@ export default function Lawyers() {
       <ConfirmDialog
         open={!!deleteId}
         onOpenChange={(o) => !o && setDeleteId(null)}
-        title="Eliminar Abogado"
+        title="Eliminar Profesional"
         description={`¿Estás seguro de eliminar a "${deleteLawyerItem?.name}"? Esta acción no se puede deshacer.`}
         confirmLabel="Eliminar"
         variant="destructive"

@@ -21,7 +21,7 @@ const alerts: Alert[] = [
     id: '2',
     type: 'warning',
     title: 'Casos sin asignar',
-    description: '2 casos nuevos sin abogado',
+    description: '2 casos nuevos sin profesional',
     time: 'Hace 5h',
   },
   {

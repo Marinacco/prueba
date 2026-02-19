@@ -24,7 +24,7 @@ export function StatCard({ title, value, subtitle, icon, trend, variant = 'defau
     >
       <div
         className={cn(
-          'absolute -right-4 -top-4 h-24 w-24 rounded-full opacity-10',
+          'absolute -right-4 -top-4 h-20 w-20 sm:h-24 sm:w-24 rounded-full opacity-10',
           variant === 'accent' ? 'bg-white' : 'bg-accent'
         )}
       />
@@ -32,11 +32,11 @@ export function StatCard({ title, value, subtitle, icon, trend, variant = 'defau
         <div className="flex items-start justify-between">
           <div
             className={cn(
-              'flex h-12 w-12 items-center justify-center rounded-xl',
+              'flex h-9 w-9 sm:h-12 sm:w-12 items-center justify-center rounded-lg sm:rounded-xl',
               variant === 'accent' ? 'bg-white/20' : 'bg-accent/10'
             )}
           >
-            <div className={cn(variant === 'accent' ? 'text-white' : 'text-accent')}>
+            <div className={cn('scale-75 sm:scale-100', variant === 'accent' ? 'text-white' : 'text-accent')}>
               {icon}
             </div>
           </div>
@@ -52,13 +52,13 @@ export function StatCard({ title, value, subtitle, icon, trend, variant = 'defau
             </div>
           )}
         </div>
-        <div className="mt-4">
-          <p className={cn('text-sm font-medium', variant === 'accent' ? 'text-white/70' : 'text-muted-foreground')}>
+        <div className="mt-2 sm:mt-4">
+          <p className={cn('text-xs sm:text-sm font-medium', variant === 'accent' ? 'text-white/70' : 'text-muted-foreground')}>
             {title}
           </p>
-          <p className="mt-1 text-2xl sm:text-3xl font-bold tabular-nums">{value}</p>
+          <p className="mt-0.5 sm:mt-1 text-lg sm:text-3xl font-bold tabular-nums leading-tight">{value}</p>
           {subtitle && (
-            <p className={cn('mt-1 text-sm', variant === 'accent' ? 'text-white/60' : 'text-muted-foreground')}>
+            <p className={cn('mt-0.5 sm:mt-1 text-xs sm:text-sm', variant === 'accent' ? 'text-white/60' : 'text-muted-foreground')}>
               {subtitle}
             </p>
           )}

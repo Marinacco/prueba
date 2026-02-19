@@ -22,7 +22,7 @@ export function useCreateLawyer() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['lawyers'] }); toast.success('Abogado registrado'); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['lawyers'] }); toast.success('Profesional registrado'); },
     onError: (e: any) => toast.error('Error', { description: e.message }),
   });
 }
@@ -35,7 +35,7 @@ export function useUpdateLawyer() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['lawyers'] }); toast.success('Abogado actualizado'); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['lawyers'] }); toast.success('Profesional actualizado'); },
     onError: (e: any) => toast.error('Error', { description: e.message }),
   });
 }
@@ -47,7 +47,7 @@ export function useDeleteLawyer() {
       const { error } = await (supabase as any).from('lawyers').delete().eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['lawyers'] }); toast.success('Abogado eliminado'); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['lawyers'] }); toast.success('Profesional eliminado'); },
     onError: (e: any) => toast.error('Error', { description: e.message }),
   });
 }
@@ -113,6 +113,88 @@ export function useCreateClient() {
   });
 }
 
+// Case Lawyers (junction table)
+export function useCaseLawyers(caseId?: string) {
+  return useQuery({
+    queryKey: ['case_lawyers', caseId],
+    queryFn: async () => {
+      let query = (supabase as any).from('case_lawyers').select('*, lawyer:lawyers(*)');
+      if (caseId) query = query.eq('case_id', caseId);
+      const { data, error } = await query.order('created_at', { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+    enabled: caseId ? !!caseId : true,
+  });
+}
+
+export function useAllCaseLawyers() {
+  return useQuery({
+    queryKey: ['case_lawyers_all'],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from('case_lawyers')
+        .select('*, lawyer:lawyers(*), case:cases(*, client:clients(*), service:legal_services(*))');
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+export function useCreateCaseLawyer() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: { case_id: string; lawyer_id: string; commission_type?: string; commission_percentage: number; commission_amount: number }) => {
+      const { data: result, error } = await (supabase as any).from('case_lawyers').insert(data).select().single();
+      if (error) throw error;
+      return result;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['case_lawyers'] });
+      qc.invalidateQueries({ queryKey: ['case_lawyers_all'] });
+      qc.invalidateQueries({ queryKey: ['cases'] });
+      qc.invalidateQueries({ queryKey: ['dashboard-stats'] });
+    },
+    onError: (e: any) => toast.error('Error', { description: e.message }),
+  });
+}
+
+export function useDeleteCaseLawyer() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await (supabase as any).from('case_lawyers').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['case_lawyers'] });
+      qc.invalidateQueries({ queryKey: ['case_lawyers_all'] });
+      qc.invalidateQueries({ queryKey: ['cases'] });
+      qc.invalidateQueries({ queryKey: ['dashboard-stats'] });
+    },
+    onError: (e: any) => toast.error('Error', { description: e.message }),
+  });
+}
+
+export function useUpdateCaseLawyer() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...updates }: { id: string; [key: string]: any }) => {
+      const { data, error } = await (supabase as any).from('case_lawyers').update(updates).eq('id', id).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['case_lawyers'] });
+      qc.invalidateQueries({ queryKey: ['case_lawyers_all'] });
+      qc.invalidateQueries({ queryKey: ['cases'] });
+      qc.invalidateQueries({ queryKey: ['dashboard-stats'] });
+      toast.success('Comisión actualizada');
+    },
+    onError: (e: any) => toast.error('Error', { description: e.message }),
+  });
+}
+
 // Cases with joins
 export function useCases() {
   return useQuery({
@@ -120,7 +202,7 @@ export function useCases() {
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from('cases')
-        .select('*, client:clients(*), service:legal_services(*), lawyer:lawyers(*)')
+        .select('*, client:clients(*), service:legal_services(*), lawyer:lawyers(*), case_lawyers:case_lawyers(*, lawyer:lawyers(*))')
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data;
@@ -135,16 +217,21 @@ export function useCreateCase() {
       case_number: string;
       client_id: string;
       service_id: string;
-      lawyer_id: string;
+      lawyer_id?: string;
       total_amount: number;
-      commission_amount: number;
+      commission_amount?: number;
+      start_date?: string;
       notes?: string;
     }) => {
       const { data, error } = await (supabase as any).from('cases').insert(caseData).select().single();
       if (error) throw error;
       return data;
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['cases'] }); toast.success('Caso creado'); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['cases'] });
+      qc.invalidateQueries({ queryKey: ['dashboard-stats'] });
+      toast.success('Caso creado');
+    },
     onError: (e: any) => toast.error('Error', { description: e.message }),
   });
 }
@@ -157,7 +244,13 @@ export function useUpdateCase() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['cases'] }); toast.success('Caso actualizado'); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['cases'] });
+      qc.invalidateQueries({ queryKey: ['dashboard-stats'] });
+      qc.invalidateQueries({ queryKey: ['case_lawyers'] });
+      qc.invalidateQueries({ queryKey: ['case_lawyers_all'] });
+      toast.success('Caso actualizado');
+    },
     onError: (e: any) => toast.error('Error', { description: e.message }),
   });
 }
@@ -169,44 +262,58 @@ export function useDeleteCase() {
       const { error } = await (supabase as any).from('cases').delete().eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['cases'] }); toast.success('Caso eliminado'); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['cases'] });
+      qc.invalidateQueries({ queryKey: ['dashboard-stats'] });
+      toast.success('Caso eliminado');
+    },
     onError: (e: any) => toast.error('Error', { description: e.message }),
   });
 }
 
-// Dashboard stats (computed from cases)
+// Dashboard stats (computed from cases + case_lawyers)
 export function useDashboardStats() {
   return useQuery({
     queryKey: ['dashboard-stats'],
     queryFn: async () => {
-      const [casesRes, lawyersRes, clientsRes] = await Promise.all([
-        (supabase as any).from('cases').select('*, lawyer:lawyers(name)'),
+      const [casesRes, lawyersRes, clientsRes, caseLawyersRes] = await Promise.all([
+        (supabase as any).from('cases').select('*'),
         (supabase as any).from('lawyers').select('*'),
         (supabase as any).from('clients').select('id'),
+        (supabase as any).from('case_lawyers').select('*, lawyer:lawyers(name), case:cases(total_amount, status, start_date)'),
       ]);
 
       const cases = casesRes.data || [];
       const lawyers = lawyersRes.data || [];
       const clients = clientsRes.data || [];
+      const caseLawyers = caseLawyersRes.data || [];
 
-      const now = new Date();
-      const currentMonth = now.getMonth();
-      const currentYear = now.getFullYear();
+      // Monto Contratado = sum of all case total_amounts
+      const totalContracted = cases.reduce((s: number, c: any) => s + Number(c.total_amount || 0), 0);
 
-      const monthlyCases = cases.filter((c: any) => {
-        const d = new Date(c.start_date);
-        return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-      });
+      // Total commissions paid
+      const totalCommissionsPaid = caseLawyers
+        .filter((cl: any) => cl.commission_paid)
+        .reduce((s: number, cl: any) => s + Number(cl.commission_amount || 0), 0);
+
+      // Monto Pagado = Monto Contratado - Comisiones Pagadas
+      const montoPagado = totalContracted - totalCommissionsPaid;
+
+      // Pending commissions
+      const pendingCommissions = caseLawyers
+        .filter((cl: any) => !cl.commission_paid)
+        .reduce((s: number, cl: any) => s + Number(cl.commission_amount || 0), 0);
 
       return {
-        totalRevenue: cases.reduce((s: number, c: any) => s + Number(c.total_amount || 0), 0),
-        monthlyRevenue: monthlyCases.reduce((s: number, c: any) => s + Number(c.total_amount || 0), 0),
-        totalCommissions: cases.filter((c: any) => c.commission_paid).reduce((s: number, c: any) => s + Number(c.commission_amount || 0), 0),
-        pendingCommissions: cases.filter((c: any) => !c.commission_paid).reduce((s: number, c: any) => s + Number(c.commission_amount || 0), 0),
+        totalContracted,
+        montoPagado,
+        totalCommissionsPaid,
+        pendingCommissions,
         activeCases: cases.filter((c: any) => c.status === 'active' || c.status === 'in_progress').length,
         completedCases: cases.filter((c: any) => c.status === 'completed').length,
         totalLawyers: lawyers.length,
         totalClients: clients.length,
+        caseLawyers,
       };
     },
   });

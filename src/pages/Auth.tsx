@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Scale } from 'lucide-react';
+import logoImg from '@/assets/logo.ico';
 import { toast } from 'sonner';
 
 export default function Auth() {
@@ -44,11 +44,11 @@ export default function Auth() {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="flex flex-col items-center mb-8">
-          <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-primary mb-4">
-            <Scale className="h-8 w-8 text-primary-foreground" />
+          <div className="flex h-14 w-14 items-center justify-center rounded-xl overflow-hidden mb-4">
+            <img src={logoImg} alt="Logo" className="h-14 w-14 object-contain" />
           </div>
           <h1 className="font-display text-3xl font-bold text-foreground">Prueba</h1>
-          <p className="text-muted-foreground mt-1">Sistema de Gestión Legal</p>
+          <p className="text-muted-foreground mt-1">Asignación y Seguimiento de Comisiones</p>
         </div>
 
         <div className="stat-card">

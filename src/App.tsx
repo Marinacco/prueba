@@ -6,6 +6,8 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import Index from "./pages/Index";
 import Cases from "./pages/Cases";
+import Commissions from "./pages/Commissions";
+import Reports from "./pages/Reports";
 import Services from "./pages/Services";
 import Lawyers from "./pages/Lawyers";
 import Finances from "./pages/Finances";
@@ -34,6 +36,8 @@ const AppRoutes = () => (
     <Route path="/auth" element={<AuthRoute><Auth /></AuthRoute>} />
     <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
     <Route path="/cases" element={<ProtectedRoute><Cases /></ProtectedRoute>} />
+    <Route path="/commissions" element={<ProtectedRoute><Commissions /></ProtectedRoute>} />
+    <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
     <Route path="/services" element={<ProtectedRoute><Services /></ProtectedRoute>} />
     <Route path="/lawyers" element={<ProtectedRoute><Lawyers /></ProtectedRoute>} />
     <Route path="/finances" element={<ProtectedRoute><Finances /></ProtectedRoute>} />

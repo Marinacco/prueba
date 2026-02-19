@@ -14,6 +14,78 @@ export type Database = {
   }
   public: {
     Tables: {
+      app_settings: {
+        Row: {
+          created_at: string
+          id: string
+          key: string
+          updated_at: string
+          value: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          key: string
+          updated_at?: string
+          value?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          key?: string
+          updated_at?: string
+          value?: string | null
+        }
+        Relationships: []
+      }
+      case_lawyers: {
+        Row: {
+          case_id: string
+          commission_amount: number
+          commission_paid: boolean
+          commission_percentage: number
+          commission_type: string
+          created_at: string
+          id: string
+          lawyer_id: string
+        }
+        Insert: {
+          case_id: string
+          commission_amount?: number
+          commission_paid?: boolean
+          commission_percentage?: number
+          commission_type?: string
+          created_at?: string
+          id?: string
+          lawyer_id: string
+        }
+        Update: {
+          case_id?: string
+          commission_amount?: number
+          commission_paid?: boolean
+          commission_percentage?: number
+          commission_type?: string
+          created_at?: string
+          id?: string
+          lawyer_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "case_lawyers_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_lawyers_lawyer_id_fkey"
+            columns: ["lawyer_id"]
+            isOneToOne: false
+            referencedRelation: "lawyers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cases: {
         Row: {
           case_number: string
@@ -25,6 +97,8 @@ export type Database = {
           id: string
           lawyer_id: string | null
           notes: string | null
+          payment_status: string
+          priority: string
           service_id: string | null
           start_date: string
           status: string
@@ -41,6 +115,8 @@ export type Database = {
           id?: string
           lawyer_id?: string | null
           notes?: string | null
+          payment_status?: string
+          priority?: string
           service_id?: string | null
           start_date?: string
           status?: string
@@ -57,6 +133,8 @@ export type Database = {
           id?: string
           lawyer_id?: string | null
           notes?: string | null
+          payment_status?: string
+          priority?: string
           service_id?: string | null
           start_date?: string
           status?: string

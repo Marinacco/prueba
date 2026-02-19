@@ -42,7 +42,7 @@ export function EditLawyerDialog({ open, onOpenChange, lawyer }: EditLawyerDialo
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader><DialogTitle className="text-xl font-semibold">Editar Abogado</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle className="text-xl font-semibold">Editar Profesional</DialogTitle></DialogHeader>
         <div className="space-y-4 py-4">
           <div className="space-y-2">
             <Label>Nombre Completo *</Label>

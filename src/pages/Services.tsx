@@ -24,7 +24,7 @@ export default function Services() {
   );
 
   const formatCurrency = (value: number) =>
-    new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(value);
+    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(value);
 
   const deleteService = services.find((s: any) => s.id === deleteId);
 

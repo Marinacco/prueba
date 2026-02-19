@@ -6,17 +6,20 @@ import {
   FileText,
   DollarSign,
   Settings,
-  Scale,
   LogOut,
+  BarChart3,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
+import logoImg from '@/assets/logo.ico';
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Casos', href: '/cases', icon: Briefcase },
+  { name: 'Comisiones', href: '/commissions', icon: DollarSign },
+  { name: 'Reportes', href: '/reports', icon: BarChart3 },
   { name: 'Servicios', href: '/services', icon: FileText },
-  { name: 'Abogados', href: '/lawyers', icon: Users },
+  { name: 'Profesionales', href: '/lawyers', icon: Users },
   { name: 'Finanzas', href: '/finances', icon: DollarSign },
   { name: 'Configuración', href: '/settings', icon: Settings },
 ];
@@ -34,11 +37,11 @@ export function Sidebar({ onNavigate }: SidebarProps) {
     : user?.email?.substring(0, 2).toUpperCase() || 'US';
 
   return (
-    <aside className="fixed left-0 top-0 z-40 h-screen w-64 bg-sidebar border-r border-sidebar-border lg:block">
+    <aside className="h-full w-full bg-sidebar lg:fixed lg:left-0 lg:top-0 lg:z-40 lg:h-screen lg:w-64 lg:border-r lg:border-sidebar-border">
       <div className="flex h-full flex-col">
         <div className="flex h-20 items-center gap-3 px-6 border-b border-sidebar-border">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-sidebar-primary">
-            <Scale className="h-6 w-6 text-sidebar-primary-foreground" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg overflow-hidden">
+            <img src={logoImg} alt="Logo" className="h-10 w-10 object-contain" />
           </div>
           <div>
             <h1 className="text-lg font-semibold text-sidebar-foreground">Prueba</h1>

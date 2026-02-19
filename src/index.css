@@ -120,7 +120,7 @@
   }
 
   .stat-card {
-    @apply bg-card rounded-xl p-6 shadow-[var(--shadow-card)] border border-border/30 transition-all duration-300 hover:shadow-[var(--shadow-elevated)] hover:-translate-y-0.5;
+    @apply bg-card rounded-xl p-4 sm:p-6 shadow-[var(--shadow-card)] border border-border/30 transition-all duration-300 hover:shadow-[var(--shadow-elevated)] hover:-translate-y-0.5;
   }
 
   .nav-item {
@@ -176,6 +176,14 @@
 
   .animate-slide-up {
     animation: slideUp 0.5s ease-out forwards;
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
   }
 
   @keyframes fadeIn {

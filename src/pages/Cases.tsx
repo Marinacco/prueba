@@ -13,6 +13,10 @@ import { useCases, useDeleteCase } from '@/hooks/useSupabaseData';
 
 const statusLabels: Record<string, string> = { active: 'Activo', in_progress: 'En Proceso', completed: 'Finalizado', cancelled: 'Cancelado' };
 const statusStyles: Record<string, string> = { active: 'badge-active', in_progress: 'badge-pending', completed: 'bg-primary/10 text-primary border border-primary/20', cancelled: 'badge-inactive' };
+const paymentLabels: Record<string, string> = { pending: 'Pendiente', paid: 'Pagado', partial: 'Parcial' };
+const paymentStyles: Record<string, string> = { pending: 'badge-pending', paid: 'badge-active', partial: 'bg-accent/10 text-accent border border-accent/20' };
+const priorityLabels: Record<string, string> = { low: 'Baja', medium: 'Media', high: 'Alta', critical: 'Crítica' };
+const priorityStyles: Record<string, string> = { low: 'text-muted-foreground', medium: 'text-foreground', high: 'text-warning', critical: 'text-destructive font-semibold' };
 
 export default function Cases() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -24,19 +28,29 @@ export default function Cases() {
   const { data: cases = [], isLoading } = useCases();
   const deleteMutation = useDeleteCase();
 
-  const filteredCases = cases.filter((c: any) => {
-    const matchesSearch = c.case_number?.toLowerCase().includes(searchTerm.toLowerCase()) || c.client?.name?.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredCases = (cases as any[]).filter((c: any) => {
+    const lawyerNames = (c.case_lawyers || []).map((cl: any) => cl.lawyer?.name || '').join(' ');
+    const matchesSearch = c.case_number?.toLowerCase().includes(searchTerm.toLowerCase()) || c.client?.name?.toLowerCase().includes(searchTerm.toLowerCase()) || lawyerNames.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || c.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
   const formatCurrency = (value: number) =>
-    new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(value);
+    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(value);
 
-  const formatDate = (dateString: string) =>
-    new Date(dateString).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
+  const getLawyerNames = (c: any) => {
+    const cls = c.case_lawyers || [];
+    if (cls.length > 0) return cls.map((cl: any) => cl.lawyer?.name).filter(Boolean).join(', ');
+    return c.lawyer?.name || '—';
+  };
 
-  const deleteCaseItem = cases.find((c: any) => c.id === deleteId);
+  const getTotalCommission = (c: any) => {
+    const cls = c.case_lawyers || [];
+    if (cls.length > 0) return cls.reduce((s: number, cl: any) => s + Number(cl.commission_amount || 0), 0);
+    return Number(c.commission_amount || 0);
+  };
+
+  const deleteCaseItem = (cases as any[]).find((c: any) => c.id === deleteId);
 
   return (
     <MainLayout>
@@ -53,7 +67,7 @@ export default function Cases() {
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input placeholder="Buscar por caso o cliente..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
+          <Input placeholder="Buscar por caso, cliente o profesional..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
         </div>
         <div className="flex items-center gap-2">
           <Filter className="h-4 w-4 text-muted-foreground" />
@@ -90,26 +104,22 @@ export default function Cases() {
                   </span>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <button className="p-1.5 rounded-md hover:bg-muted transition-colors">
-                        <MoreVertical className="h-4 w-4 text-muted-foreground" />
-                      </button>
+                      <button className="p-1.5 rounded-md hover:bg-muted transition-colors"><MoreVertical className="h-4 w-4 text-muted-foreground" /></button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="bg-popover">
-                      <DropdownMenuItem onClick={() => setEditCase(c)}>
-                        <Edit2 className="mr-2 h-4 w-4" /> Editar
-                      </DropdownMenuItem>
-                      <DropdownMenuItem className="text-destructive" onClick={() => setDeleteId(c.id)}>
-                        <Trash2 className="mr-2 h-4 w-4" /> Eliminar
-                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setEditCase(c)}><Edit2 className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
+                      <DropdownMenuItem className="text-destructive" onClick={() => setDeleteId(c.id)}><Trash2 className="mr-2 h-4 w-4" /> Eliminar</DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-2 text-sm">
                 <div><span className="text-muted-foreground">Servicio:</span> <span className="text-foreground">{c.service?.name || '—'}</span></div>
-                <div><span className="text-muted-foreground">Abogado:</span> <span className="text-foreground">{c.lawyer?.name || '—'}</span></div>
+                <div><span className="text-muted-foreground">Profesionales:</span> <span className="text-foreground">{getLawyerNames(c)}</span></div>
                 <div><span className="text-muted-foreground">Monto:</span> <span className="font-semibold text-foreground tabular-nums">{formatCurrency(Number(c.total_amount))}</span></div>
-                <div><span className="text-muted-foreground">Comisión:</span> <span className="font-semibold text-accent tabular-nums">{formatCurrency(Number(c.commission_amount))}</span></div>
+                <div><span className="text-muted-foreground">Comisiones:</span> <span className="font-semibold text-accent tabular-nums">{formatCurrency(getTotalCommission(c))}</span></div>
+                <div><span className="text-muted-foreground">Pago:</span> <span className={cn('inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium', paymentStyles[c.payment_status] || 'badge-pending')}>{paymentLabels[c.payment_status] || 'Pendiente'}</span></div>
+                <div><span className="text-muted-foreground">Prioridad:</span> <span className={cn('text-sm font-medium', priorityStyles[c.priority] || '')}>{priorityLabels[c.priority] || 'Media'}</span></div>
               </div>
             </div>
           ))
@@ -130,11 +140,12 @@ export default function Cases() {
                   <th className="px-6 py-4 text-left">Caso</th>
                   <th className="px-6 py-4 text-left">Cliente</th>
                   <th className="px-6 py-4 text-left">Servicio</th>
-                  <th className="px-6 py-4 text-left">Abogado</th>
-                  <th className="px-6 py-4 text-center">Estado</th>
-                  <th className="px-6 py-4 text-left">Fecha</th>
+                  <th className="px-6 py-4 text-left">Profesionales</th>
                   <th className="px-6 py-4 text-right">Monto</th>
-                  <th className="px-6 py-4 text-right">Comisión</th>
+                  <th className="px-6 py-4 text-right">Comisiones</th>
+                  <th className="px-6 py-4 text-center">Estado</th>
+                  <th className="px-6 py-4 text-center">Pago</th>
+                  <th className="px-6 py-4 text-center">Prioridad</th>
                   <th className="px-6 py-4 text-center">Acciones</th>
                 </tr>
               </thead>
@@ -148,37 +159,40 @@ export default function Cases() {
                     </td>
                     <td className="px-6 py-4">
                       <p className="text-sm text-foreground">{c.service?.name || '—'}</p>
-                      <p className="text-xs text-muted-foreground">{c.service?.category || ''}</p>
                     </td>
-                    <td className="px-6 py-4"><span className="text-sm text-foreground">{c.lawyer?.name || '—'}</span></td>
+                    <td className="px-6 py-4">
+                      <div className="space-y-0.5">
+                        {(c.case_lawyers || []).length > 0 ? (c.case_lawyers as any[]).map((cl: any, i: number) => (
+                          <p key={i} className="text-sm text-foreground">{cl.lawyer?.name || '—'} <span className="text-xs text-accent tabular-nums">({formatCurrency(Number(cl.commission_amount || 0))})</span></p>
+                        )) : <span className="text-sm text-muted-foreground">—</span>}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-right"><span className="font-semibold text-foreground tabular-nums">{formatCurrency(Number(c.total_amount))}</span></td>
+                    <td className="px-6 py-4 text-right"><span className="font-semibold text-accent tabular-nums">{formatCurrency(getTotalCommission(c))}</span></td>
                     <td className="px-6 py-4 text-center">
                       <span className={cn('inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium', statusStyles[c.status] || '')}>
                         {statusLabels[c.status] || c.status}
                       </span>
                     </td>
-                    <td className="px-6 py-4"><span className="text-sm text-foreground tabular-nums">{formatDate(c.start_date)}</span></td>
-                    <td className="px-6 py-4 text-right"><span className="font-semibold text-foreground tabular-nums">{formatCurrency(Number(c.total_amount))}</span></td>
-                    <td className="px-6 py-4 text-right">
-                      <span className="font-semibold text-accent tabular-nums">{formatCurrency(Number(c.commission_amount))}</span>
-                      <span className={cn('ml-2 inline-flex items-center rounded-full px-2 py-0.5 text-xs', c.commission_paid ? 'badge-active' : 'badge-pending')}>
-                        {c.commission_paid ? 'Pagada' : 'Pendiente'}
+                    <td className="px-6 py-4 text-center">
+                      <span className={cn('inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium', paymentStyles[c.payment_status] || 'badge-pending')}>
+                        {paymentLabels[c.payment_status] || 'Pendiente'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <span className={cn('text-sm font-medium', priorityStyles[c.priority] || '')}>
+                        {priorityLabels[c.priority] || 'Media'}
                       </span>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-center gap-1">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <button className="p-1.5 rounded-md hover:bg-muted transition-colors">
-                              <MoreVertical className="h-4 w-4 text-muted-foreground" />
-                            </button>
+                            <button className="p-1.5 rounded-md hover:bg-muted transition-colors"><MoreVertical className="h-4 w-4 text-muted-foreground" /></button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="bg-popover">
-                            <DropdownMenuItem onClick={() => setEditCase(c)}>
-                              <Edit2 className="mr-2 h-4 w-4" /> Editar
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className="text-destructive" onClick={() => setDeleteId(c.id)}>
-                              <Trash2 className="mr-2 h-4 w-4" /> Eliminar
-                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setEditCase(c)}><Edit2 className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
+                            <DropdownMenuItem className="text-destructive" onClick={() => setDeleteId(c.id)}><Trash2 className="mr-2 h-4 w-4" /> Eliminar</DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
@@ -191,7 +205,7 @@ export default function Cases() {
         )}
       </div>
 
-      <div className="mt-4"><p className="text-sm text-muted-foreground">Mostrando {filteredCases.length} de {cases.length} casos</p></div>
+      <div className="mt-4"><p className="text-sm text-muted-foreground">Mostrando {filteredCases.length} de {(cases as any[]).length} casos</p></div>
 
       <NewCaseDialog open={newCaseOpen} onOpenChange={setNewCaseOpen} />
       <EditCaseDialog open={!!editCase} onOpenChange={(o) => !o && setEditCase(null)} caseItem={editCase} />

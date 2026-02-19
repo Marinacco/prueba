@@ -1,33 +1,106 @@
 import { useState } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { cn } from '@/lib/utils';
-import { DollarSign, TrendingUp, Download, FileSpreadsheet, FileText, CheckCircle, Clock } from 'lucide-react';
+import { DollarSign, TrendingUp, Download, FileText, CheckCircle, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog';
-import { useCases, useUpdateCase, useDashboardStats } from '@/hooks/useSupabaseData';
+import { useAllCaseLawyers, useUpdateCaseLawyer, useDashboardStats } from '@/hooks/useSupabaseData';
 import { toast } from 'sonner';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 export default function Finances() {
   const [liquidateAllOpen, setLiquidateAllOpen] = useState(false);
   const [liquidateId, setLiquidateId] = useState<string | null>(null);
 
-  const { data: cases = [] } = useCases();
+  const { data: caseLawyers = [] } = useAllCaseLawyers();
   const { data: stats } = useDashboardStats();
-  const updateCase = useUpdateCase();
+  const updateCaseLawyer = useUpdateCaseLawyer();
 
-  const s = stats || { totalRevenue: 0, monthlyRevenue: 0, pendingCommissions: 0, totalCommissions: 0 };
+  const s = stats || { totalContracted: 0, montoPagado: 0, pendingCommissions: 0, totalCommissionsPaid: 0 };
 
   const formatCurrency = (value: number) =>
-    new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(value);
+    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(value);
 
-  const pendingCommissions = cases.filter((c: any) => !c.commission_paid && Number(c.commission_amount) > 0);
-  const paidCommissions = cases.filter((c: any) => c.commission_paid);
+  const allCommissions = (caseLawyers as any[]).filter((cl: any) => Number(cl.commission_amount) > 0);
+  const pendingCommissions = allCommissions.filter((cl: any) => !cl.commission_paid);
+  const paidCommissions = allCommissions.filter((cl: any) => cl.commission_paid);
 
-  const handleExport = (type: string) => {
-    toast.success(`Exportando ${type}...`, { description: 'El archivo se descargará en breve' });
+  const handleExportPDF = () => {
+    const doc = new jsPDF();
+    doc.setFontSize(18);
+    doc.text('Control Financiero', 14, 22);
+    doc.setFontSize(10);
+    doc.text(`Generado: ${new Date().toLocaleDateString('es-MX')}`, 14, 30);
+
+    // Summary
+    doc.setFontSize(12);
+    doc.text('Resumen', 14, 42);
+    autoTable(doc, {
+      startY: 46,
+      head: [['Concepto', 'Monto']],
+      body: [
+        ['Monto Contratado', formatCurrency(s.totalContracted)],
+        ['Monto Pagado (Neto)', formatCurrency(s.montoPagado)],
+        ['Comisiones Pagadas', formatCurrency(s.totalCommissionsPaid)],
+        ['Comisiones Pendientes', formatCurrency(s.pendingCommissions)],
+      ],
+      theme: 'striped',
+      headStyles: { fillColor: [41, 37, 36] },
+    });
+
+    const afterSummary = (doc as any).lastAutoTable?.finalY || 80;
+
+    // Pending commissions
+    if (pendingCommissions.length > 0) {
+      doc.setFontSize(12);
+      doc.text('Comisiones Pendientes', 14, afterSummary + 10);
+      autoTable(doc, {
+        startY: afterSummary + 14,
+        head: [['Caso', 'Profesional', 'Servicio', 'Monto Caso', 'Comisión']],
+        body: pendingCommissions.map((cl: any) => [
+          cl.case?.case_number || '—',
+          cl.lawyer?.name || '—',
+          cl.case?.service?.name || '—',
+          formatCurrency(Number(cl.case?.total_amount || 0)),
+          formatCurrency(Number(cl.commission_amount)),
+        ]),
+        foot: [['', '', '', 'Total', formatCurrency(pendingCommissions.reduce((sum: number, cl: any) => sum + Number(cl.commission_amount), 0))]],
+        theme: 'striped',
+        headStyles: { fillColor: [41, 37, 36] },
+        footStyles: { fillColor: [245, 245, 244], textColor: [0, 0, 0], fontStyle: 'bold' },
+      });
+    }
+
+    const afterPending = (doc as any).lastAutoTable?.finalY || afterSummary + 10;
+
+    // Paid commissions
+    if (paidCommissions.length > 0) {
+      const yPos = afterPending + 10;
+      if (yPos > 260) doc.addPage();
+      const startY = yPos > 260 ? 20 : yPos;
+      doc.setFontSize(12);
+      doc.text('Comisiones Pagadas', 14, startY);
+      autoTable(doc, {
+        startY: startY + 4,
+        head: [['Caso', 'Profesional', 'Servicio', 'Comisión']],
+        body: paidCommissions.map((cl: any) => [
+          cl.case?.case_number || '—',
+          cl.lawyer?.name || '—',
+          cl.case?.service?.name || '—',
+          formatCurrency(Number(cl.commission_amount)),
+        ]),
+        foot: [['', '', 'Total', formatCurrency(paidCommissions.reduce((sum: number, cl: any) => sum + Number(cl.commission_amount), 0))]],
+        theme: 'striped',
+        headStyles: { fillColor: [41, 37, 36] },
+        footStyles: { fillColor: [245, 245, 244], textColor: [0, 0, 0], fontStyle: 'bold' },
+      });
+    }
+
+    doc.save(`control-financiero-${new Date().toISOString().slice(0, 10)}.pdf`);
+    toast.success('PDF descargado exitosamente');
   };
 
-  const liquidateCase = cases.find((c: any) => c.id === liquidateId);
+  const liquidateItem = (caseLawyers as any[]).find((cl: any) => cl.id === liquidateId);
 
   return (
     <MainLayout>
@@ -36,27 +109,26 @@ export default function Finances() {
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Control Financiero</h1>
           <p className="mt-1 text-sm text-muted-foreground">Gestión de ingresos y comisiones</p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="gap-2" onClick={() => handleExport('Excel')}><FileSpreadsheet className="h-4 w-4" />Excel</Button>
-          <Button variant="outline" size="sm" className="gap-2" onClick={() => handleExport('PDF')}><FileText className="h-4 w-4" />PDF</Button>
-        </div>
+        <Button className="btn-gold gap-2 w-full sm:w-auto" onClick={handleExportPDF}>
+          <Download className="h-4 w-4" /> Descargar PDF
+        </Button>
       </div>
 
       <div className="grid gap-4 grid-cols-2 lg:grid-cols-4 mb-6">
         <div className="stat-card">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-success/10 mb-3"><DollarSign className="h-5 w-5 text-success" /></div>
-          <p className="text-xs sm:text-sm text-muted-foreground">Ingresos Totales</p>
-          <p className="text-lg sm:text-2xl font-bold text-foreground tabular-nums">{formatCurrency(s.totalRevenue)}</p>
+          <p className="text-xs sm:text-sm text-muted-foreground">Monto Contratado</p>
+          <p className="text-lg sm:text-2xl font-bold text-foreground tabular-nums">{formatCurrency(s.totalContracted)}</p>
         </div>
         <div className="stat-card">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/10 mb-3"><TrendingUp className="h-5 w-5 text-accent" /></div>
-          <p className="text-xs sm:text-sm text-muted-foreground">Ingresos del Mes</p>
-          <p className="text-lg sm:text-2xl font-bold text-foreground tabular-nums">{formatCurrency(s.monthlyRevenue)}</p>
+          <p className="text-xs sm:text-sm text-muted-foreground">Monto Pagado</p>
+          <p className="text-lg sm:text-2xl font-bold text-foreground tabular-nums">{formatCurrency(s.montoPagado)}</p>
         </div>
         <div className="stat-card">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 mb-3"><CheckCircle className="h-5 w-5 text-primary" /></div>
           <p className="text-xs sm:text-sm text-muted-foreground">Comisiones Pagadas</p>
-          <p className="text-lg sm:text-2xl font-bold text-foreground tabular-nums">{formatCurrency(s.totalCommissions)}</p>
+          <p className="text-lg sm:text-2xl font-bold text-foreground tabular-nums">{formatCurrency(s.totalCommissionsPaid)}</p>
         </div>
         <div className="stat-card bg-warning/5 border-warning/20">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-warning/10 mb-3"><Clock className="h-5 w-5 text-warning" /></div>
@@ -80,15 +152,15 @@ export default function Finances() {
             <p className="text-sm text-muted-foreground text-center py-4">No hay comisiones pendientes</p>
           ) : (
             <div className="space-y-3">
-              {pendingCommissions.map((c: any) => (
-                <div key={c.id} className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-muted/30 transition-colors">
+              {pendingCommissions.map((cl: any) => (
+                <div key={cl.id} className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-muted/30 transition-colors">
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">{c.lawyer?.name || '—'}</p>
-                    <p className="text-xs text-muted-foreground truncate">{c.case_number} - {c.service?.name || ''}</p>
+                    <p className="text-sm font-medium text-foreground truncate">{cl.lawyer?.name || '—'}</p>
+                    <p className="text-xs text-muted-foreground truncate">{cl.case?.case_number || '—'} - {cl.case?.service?.name || ''}</p>
                   </div>
                   <div className="text-right flex-shrink-0 ml-2">
-                    <p className="font-semibold text-accent tabular-nums">{formatCurrency(Number(c.commission_amount))}</p>
-                    <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setLiquidateId(c.id)}>Liquidar</Button>
+                    <p className="font-semibold text-accent tabular-nums">{formatCurrency(Number(cl.commission_amount))}</p>
+                    <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setLiquidateId(cl.id)}>Liquidar</Button>
                   </div>
                 </div>
               ))}
@@ -102,14 +174,14 @@ export default function Finances() {
             <p className="text-sm text-muted-foreground text-center py-4">No hay comisiones pagadas</p>
           ) : (
             <div className="space-y-3">
-              {paidCommissions.map((c: any) => (
-                <div key={c.id} className="flex items-center justify-between p-3 rounded-lg border border-border">
+              {paidCommissions.map((cl: any) => (
+                <div key={cl.id} className="flex items-center justify-between p-3 rounded-lg border border-border">
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">{c.lawyer?.name || '—'}</p>
-                    <p className="text-xs text-muted-foreground truncate">{c.case_number}</p>
+                    <p className="text-sm font-medium text-foreground truncate">{cl.lawyer?.name || '—'}</p>
+                    <p className="text-xs text-muted-foreground truncate">{cl.case?.case_number || '—'}</p>
                   </div>
                   <div className="text-right flex-shrink-0 ml-2">
-                    <p className="font-semibold text-success tabular-nums">{formatCurrency(Number(c.commission_amount))}</p>
+                    <p className="font-semibold text-success tabular-nums">{formatCurrency(Number(cl.commission_amount))}</p>
                     <span className="badge-active inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium">
                       <CheckCircle className="h-3 w-3" />Pagada
                     </span>
@@ -125,11 +197,11 @@ export default function Finances() {
         open={liquidateAllOpen}
         onOpenChange={setLiquidateAllOpen}
         title="Liquidar Todas las Comisiones"
-        description={`¿Confirmas la liquidación de ${pendingCommissions.length} comisiones pendientes por un total de ${formatCurrency(pendingCommissions.reduce((sum: number, c: any) => sum + Number(c.commission_amount), 0))}?`}
+        description={`¿Confirmas la liquidación de ${pendingCommissions.length} comisiones pendientes por un total de ${formatCurrency(pendingCommissions.reduce((sum: number, cl: any) => sum + Number(cl.commission_amount), 0))}?`}
         confirmLabel="Liquidar Todas"
         onConfirm={async () => {
-          for (const c of pendingCommissions) {
-            await updateCase.mutateAsync({ id: c.id, commission_paid: true });
+          for (const cl of pendingCommissions) {
+            await updateCaseLawyer.mutateAsync({ id: cl.id, commission_paid: true });
           }
           setLiquidateAllOpen(false);
         }}
@@ -138,9 +210,9 @@ export default function Finances() {
         open={!!liquidateId}
         onOpenChange={(o) => !o && setLiquidateId(null)}
         title="Liquidar Comisión"
-        description={`¿Confirmas la liquidación de ${formatCurrency(Number(liquidateCase?.commission_amount ?? 0))} para ${liquidateCase?.lawyer?.name}?`}
+        description={`¿Confirmas la liquidación de ${formatCurrency(Number(liquidateItem?.commission_amount ?? 0))} para ${liquidateItem?.lawyer?.name}?`}
         confirmLabel="Liquidar"
-        onConfirm={() => { updateCase.mutate({ id: liquidateId!, commission_paid: true }); setLiquidateId(null); }}
+        onConfirm={() => { updateCaseLawyer.mutate({ id: liquidateId!, commission_paid: true }); setLiquidateId(null); }}
       />
     </MainLayout>
   );
